@@ -232,9 +232,14 @@ class _ValueBaseFilter(_FilterProcessor):
         for record in zone.records:
             values = []
             if hasattr(record, 'values'):
-                values = [value.rdata_text for value in record.values]
+                values = [value for value in record.values]
             else:
-                values = [record.value.rdata_text]
+                values = [record.value]
+
+            values = [
+                v.rdata_text if hasattr(v, 'rdata_text') else repr(v)
+                for v in values
+            ]
 
             if any(value in self.exact for value in values):
                 self.matches(zone, record)

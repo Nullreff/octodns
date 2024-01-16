@@ -227,11 +227,29 @@ class TestValueAllowListFilter(TestCase):
         {'type': 'CNAME', 'ttl': 42, 'value': 'start.a3b444c.end.'},
     )
     zone.add_record(matchable2)
+    no_rdata = Record.new(
+        zone,
+        'no.rdata',
+        {
+            'type': 'URLFWD',
+            'ttl': 42,
+            'values': [
+                {
+                    'path': '/',
+                    'target': 'http://foo',
+                    'code': 301,
+                    'masking': 2,
+                    'query': 0,
+                }
+            ],
+        },
+    )
+    zone.add_record(no_rdata)
 
     def test_exact(self):
         allows = ValueAllowlistFilter('exact', ('matches.example.com.',))
 
-        self.assertEqual(6, len(self.zone.records))
+        self.assertEqual(7, len(self.zone.records))
         filtered = allows.process_source_zone(self.zone.copy())
         self.assertEqual(2, len(filtered.records))
         self.assertEqual(
@@ -242,7 +260,7 @@ class TestValueAllowListFilter(TestCase):
     def test_regex(self):
         allows = ValueAllowlistFilter('exact', ('/^start\\..+\\.end\\.$/',))
 
-        self.assertEqual(6, len(self.zone.records))
+        self.assertEqual(7, len(self.zone.records))
         filtered = allows.process_source_zone(self.zone.copy())
         self.assertEqual(2, len(filtered.records))
         self.assertEqual(
@@ -297,26 +315,56 @@ class TestValueRejectListFilter(TestCase):
         {'type': 'CNAME', 'ttl': 42, 'value': 'start.a3b444c.end.'},
     )
     zone.add_record(matchable2)
+    no_rdata = Record.new(
+        zone,
+        'no.rdata',
+        {
+            'type': 'URLFWD',
+            'ttl': 42,
+            'values': [
+                {
+                    'path': '/',
+                    'target': 'http://foo',
+                    'code': 301,
+                    'masking': 2,
+                    'query': 0,
+                }
+            ],
+        },
+    )
+    zone.add_record(no_rdata)
 
     def test_exact(self):
         rejects = ValueRejectlistFilter('exact', ('matches.example.com.',))
 
-        self.assertEqual(6, len(self.zone.records))
+        self.assertEqual(7, len(self.zone.records))
         filtered = rejects.process_source_zone(self.zone.copy())
-        self.assertEqual(4, len(filtered.records))
+        self.assertEqual(5, len(filtered.records))
         self.assertEqual(
-            ['bad.compare', 'bad.values', 'first.regex', 'second.regex'],
+            [
+                'bad.compare',
+                'bad.values',
+                'first.regex',
+                'no.rdata',
+                'second.regex',
+            ],
             sorted([r.name for r in filtered.records]),
         )
 
     def test_regex(self):
         rejects = ValueRejectlistFilter('exact', ('/^start\\..+\\.end\\.$/',))
 
-        self.assertEqual(6, len(self.zone.records))
+        self.assertEqual(7, len(self.zone.records))
         filtered = rejects.process_source_zone(self.zone.copy())
-        self.assertEqual(4, len(filtered.records))
+        self.assertEqual(5, len(filtered.records))
         self.assertEqual(
-            ['bad.compare', 'bad.values', 'good.compare', 'good.values'],
+            [
+                'bad.compare',
+                'bad.values',
+                'good.compare',
+                'good.values',
+                'no.rdata',
+            ],
             sorted([r.name for r in filtered.records]),
         )
 
