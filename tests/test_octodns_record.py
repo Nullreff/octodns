@@ -683,6 +683,57 @@ class TestRecordValidation(TestCase):
             lenient=True,
         )
 
+    def test_values_and_value(self):
+        # value w/one
+        r = Record.new(
+            self.zone, 'thing', {'type': 'TXT', 'ttl': 42, 'value': 'just one'}
+        )
+        self.assertEqual(['just one'], r.values)
+
+        # value w/multiple
+        r = Record.new(
+            self.zone,
+            'thing',
+            {'type': 'TXT', 'ttl': 42, 'value': ['the first', 'the second']},
+        )
+        self.assertEqual(['the first', 'the second'], r.values)
+
+        # values w/one
+        r = Record.new(
+            self.zone, 'thing', {'type': 'TXT', 'ttl': 42, 'values': 'just one'}
+        )
+        self.assertEqual(['just one'], r.values)
+
+        # values w/multiple
+        r = Record.new(
+            self.zone,
+            'thing',
+            {'type': 'TXT', 'ttl': 42, 'values': ['the first', 'the second']},
+        )
+        self.assertEqual(['the first', 'the second'], r.values)
+
+        # tuples work too
+        r = Record.new(
+            self.zone,
+            'thing',
+            {'type': 'TXT', 'ttl': 42, 'values': ('the first', 'the second')},
+        )
+        self.assertEqual(['the first', 'the second'], r.values)
+
+        # values is preferred over value
+        # values w/multiple
+        r = Record.new(
+            self.zone,
+            'thing',
+            {
+                'type': 'TXT',
+                'ttl': 42,
+                'values': ['the first', 'the second'],
+                'value': ['not used', 'not used'],
+            },
+        )
+        self.assertEqual(['the first', 'the second'], r.values)
+
     def test_validation_context(self):
         # fails validation, no context
         with self.assertRaises(ValidationError) as ctx:
@@ -795,3 +846,30 @@ class TestRecordValidation(TestCase):
             '<CnameRecord CNAME 43, pointer.unit.tests., unit.tests.>',
             record.__repr__(),
         )
+
+    def test_records_have_rdata_methods(self):
+        for _type, cls in Record.registered_types().items():
+            print(f'{_type} {cls}')
+            attr = 'parse_rdata_texts'
+            print(f'  {attr}')
+            method = getattr(cls, attr)
+            self.assertTrue(method, f'{_type}, {cls} has {attr}')
+            self.assertTrue(
+                callable(method), f'{_type}, {cls} {attr} is callable'
+            )
+
+            value_type = getattr(cls, '_value_type')
+            self.assertTrue(value_type, f'{_type}, {cls} has _value_type')
+
+            attr = 'parse_rdata_text'
+            print(f'  {attr}')
+            method = getattr(value_type, attr)
+            self.assertTrue(method, f'{_type}, {cls} has {attr}')
+            self.assertTrue(
+                callable(method), f'{_type}, {cls} {attr} is callable'
+            )
+
+            attr = 'rdata_text'
+            method = getattr(value_type, attr)
+            self.assertTrue(method, f'{_type}, {cls} has {attr}')
+            # this one is a @property so not callable
